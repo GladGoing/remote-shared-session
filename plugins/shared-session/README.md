@@ -1,4 +1,4 @@
-# 共享会话插件 0.3.0
+# 共享会话插件 0.3.2
 
 这是本地运行的 Codex 插件，包含分享/接收技能和 stdio MCP 服务。需要本机 Node.js 24、已登录的 Codex，以及独立运行的共享会话服务。
 
@@ -24,7 +24,11 @@ Mac 和 Windows 均可使用 Codex 聊天内提醒。更新插件后，需要在
 
 接收端可说“开启共享交接自动处理，工作目录是本机项目绝对路径”，设置 `receiveMode=work` 和 `workspace` 后自动开始处理。路径和权限由接收端决定；默认首次阅读只呈现摘要，不执行任务。两种模式都使用接收端自己的 Codex 账号和模型。可说“关闭聊天内共享提醒”单独关闭，Windows 桌面通知开关独立。
 
-本机需有正在运行、支持 `codex app-server proxy` 和聊天写入接口的 Codex 宿主。若原生接口不可用，回退链接会打开预填请求的新聊天，需要手动发送；不会宣称自动处理已启动。聊天内提醒不会在空闲时实时弹出原生铃铛通知，也不会把导入的内容自动标成已读。
+本机需有正在运行、支持聊天写入接口的 Codex daemon。Mac/Linux 的导入连接通过本机 Unix socket 完成标准 WebSocket 握手，再依次发送 `initialize` 和 `initialized`；后续 RPC 使用 WebSocket 消息帧。默认路径为 `${CODEX_HOME:-~/.codex}/app-server-control/app-server-control.sock`，自定义路径可通过插件环境变量 `SHARED_CODEX_SOCKET` 指定绝对路径；MCP 与 Hooks 使用相同环境。插件内置 ws，无需额外安装依赖。Windows 继续使用 `codex app-server proxy`，导出原聊天历史继续使用 stdio；无需修改模型的 OPENAI HTTP 配置。
+
+更新后重载插件（或重启 Codex），调用 `shared_session_open`，传入目标 `shareId` 和 `start=false`。成功会返回 `codex://threads/...` 打开链接；再次打开同一共享应返回相同 `threadId` 和链接。`start=false` 按现有行为仅启动一次内容阅读，不开启交接任务的自动处理。
+
+若原生接口不可用，回退链接会打开预填请求的新聊天，需要手动发送；不会宣称自动处理已启动。聊天内提醒不会在空闲时实时弹出原生铃铛通知，也不会把导入的内容自动标成已读。
 
 Windows 插件进程保持运行时可发送系统提醒。离线或账号失效时停止实时通知，重新连接后补收。系统免打扰和通知权限会影响横幅显示。提醒只打开网页收件箱，不向空闲聊天注入新消息、不自动执行收到的内容。网页提醒需保持页面打开。
 

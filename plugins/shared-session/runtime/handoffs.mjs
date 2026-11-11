@@ -4,17 +4,26 @@ import { createHash } from 'node:crypto';
 import { optionalJson, privateJson } from './profile.mjs';
 import { requireThat } from './errors.mjs';
 import { CodexReader } from './codex.mjs';
+import { CodexSocket } from './codex-socket.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const modes = ['notify', 'create', 'work'];
 const nativeMethods = new Set(['thread/start', 'thread/resume', 'thread/read', 'thread/name/set', 'thread/inject_items', 'turn/start']);
 
-export class CodexWriter extends CodexReader {
-  constructor(options = {}) { super({ ...options, proxy: true, timeoutMs: options.timeoutMs ?? 5000 }); }
+export class CodexWriter {
+  constructor(options = {}) {
+    const socketPath = options.socketPath || process.env.SHARED_CODEX_SOCKET;
+    const settings = { ...options, ...(socketPath ? { socketPath } : {}), timeoutMs: options.timeoutMs ?? 5000 };
+    // Node cannot connect to Windows AF_UNIX sockets. Keep the native proxy there.
+    this.connection = process.platform === 'win32' && !socketPath
+      ? new CodexReader({ ...settings, proxy: true }) : new CodexSocket(settings);
+    this.ready = this.connection.ready;
+  }
   async write(method, params) {
     requireThat(nativeMethods.has(method), 400, 'unsupported_handoff_method');
-    await this.ready; return this.rpc(method, params);
+    await this.ready; return this.connection.rpc(method, params);
   }
+  close() { this.connection.close(); }
 }
 
 export function handoffLink(server, shareId, workspace) {

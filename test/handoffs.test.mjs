@@ -8,26 +8,23 @@ import { setup, mcp, password } from '../test-support/helpers.mjs';
 import { privateJson } from '../src/profile.mjs';
 import { Bridge } from '../src/bridge.mjs';
 import { HandoffReceiver, CodexWriter } from '../src/handoffs.mjs';
+import { nativeSocket } from '../test-support/codex-socket.mjs';
 
-const writerPath = fileURLToPath(new URL('../test-support/codex-writer.mjs', import.meta.url));
 async function fixtures(t) {
   const f = await setup(t); const nativePath = join(f.directory, 'native.json');
   await writeFile(nativePath, JSON.stringify({ calls: [], threads: {} }));
   const profile = join(f.directory, 'bob.json');
   await privateJson(profile, { server: f.origin, ...f.store.login('bob', password) });
   const bridge = new Bridge({ profile, server: f.origin });
-  const writer = () => {
-    const original = process.env.SHARED_FIXTURE_NATIVE; process.env.SHARED_FIXTURE_NATIVE = nativePath;
-    try { return new CodexWriter({ binary: process.execPath, args: [writerPath] }); }
-    finally { if (original === undefined) delete process.env.SHARED_FIXTURE_NATIVE; else process.env.SHARED_FIXTURE_NATIVE = original; }
-  };
+  const { socketPath } = await nativeSocket(t, f.directory, nativePath);
+  const writer = () => new CodexWriter({ socketPath });
   const receiver = new HandoffReceiver(bridge, { writer });
   const aliceProfile = join(f.directory, 'alice.json');
   await privateJson(aliceProfile, { server: f.origin, ...f.store.login('alice', password) });
   const sender = new Bridge({ profile: aliceProfile, server: f.origin });
   const send = (requestId = 'handoff', content = '请修复当前项目的登录校验，并运行现有测试。', recipients = ['bob']) =>
     sender.send({ requestId, title: '登录交接', content, recipients });
-  return { ...f, profile, bridge, sender, receiver, send, nativePath, native: async () => JSON.parse(await readFile(nativePath, 'utf8')) };
+  return { ...f, profile, bridge, sender, receiver, send, nativePath, socketPath, native: async () => JSON.parse(await readFile(nativePath, 'utf8')) };
 }
 
 test('Codex 直接发送编辑后的内容与明确附件；不读取原聊天，重复发送幂等，修改后的重试拒绝', async t => {
@@ -83,7 +80,7 @@ test('真实插件 Hook 使用同一配置，在无桌面通知时输出打开�
   const hook = () => new Promise((ok, fail) => {
     const child = spawn(process.execPath, [hookPath], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env,
       SHARED_SESSION_SETTINGS: settingsPath, SHARED_SESSION_PROFILE: f.profile, SHARED_SESSION_SERVER: f.origin,
-      SHARED_CODEX_BINARY: process.execPath, SHARED_CODEX_ARGS: JSON.stringify([writerPath]), SHARED_FIXTURE_NATIVE: f.nativePath } });
+      SHARED_CODEX_BINARY: 'must-not-spawn-proxy', SHARED_CODEX_SOCKET: f.socketPath } });
     let output = ''; child.stdout.on('data', bytes => output += bytes); child.stderr.resume(); child.once('error', fail);
     child.once('close', code => { assert.equal(code, 0); ok(output); });
     child.stdin.end(JSON.stringify({ hook_event_name: 'UserPromptSubmit', session_id: 'hook-chat', prompt: 'PRIVATE-PROMPT' }));
