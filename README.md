@@ -1,6 +1,6 @@
 # 共享会话
 
-0.3.0：在 Codex 中编辑发送交接内容，Mac/Windows 聊天内提醒，打开接收端对应聊天继续工作，也可开启自动处理。保留原聊天历史导出、网页草稿预览、文件收发、成员管理及 Windows 桌面提醒。支持局域网独立部署和公网 HTTPS 部署。不共享 OpenAI 账号。
+0.3.1：修复 0.3.0 中插件已启用但 Hooks 列表为空的问题。在 Codex 中编辑发送交接内容，Mac/Windows 聊天内提醒，打开接收端对应聊天继续工作，也可开启自动处理。保留原聊天历史导出、网页草稿预览、文件收发、成员管理及 Windows 桌面提醒。支持局域网独立部署和公网 HTTPS 部署。不共享 OpenAI 账号。
 
 ## 局域网独立部署
 
@@ -67,6 +67,8 @@ node src/cli.mjs serve
 ### 在 Codex 中直接交接（推荐）
 
 两台电脑安装插件，使用各自的共享成员账号连接同一个服务。更新插件后，在 Codex 的“设置 > Hooks”或输入框的“Review hooks”中信任本插件的 Hooks，再新建或恢复聊天。
+
+插件使用 `.codex-plugin/plugin.json` 和 `.mcp.json` 的 Codex 兼容打包格式。当前宿主会跳过通用 Agent Plugins 格式的插件 Hooks，因此不要在包根目录加入 `plugin.json`；即使兼容清单也存在，根清单仍会优先匹配，导致工具可用而 Hooks 无法发现。验收时需确认宿主 `hooks/list` 能列出本插件的 `SessionStart` 和 `UserPromptSubmit` 两项，不能只核对版本号。
 
 发送端可以说：“把登录接口的修改要求整理成交接，发给 bob。”在聊天内继续修改内容，确认发送后 Codex 使用 `shared_session_send` 直接发布，不用再去网页确认，也不导出整段聊天。仅发送明确选择的内容和附件。后续补充同一交接时保留 `shareId`，使用新的 `requestId`；失败重试使用原编号和原内容。
 

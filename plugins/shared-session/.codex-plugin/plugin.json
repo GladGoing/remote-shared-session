@@ -1,7 +1,7 @@
 {
   "name": "shared-session",
-  "version": "0.3.0",
-  "description": "分享 Codex 会话，接收文件与更新提醒。",
+  "version": "0.3.1",
+  "description": "在 Codex 中编辑发送工作交接，接收聊天内提醒并打开对应聊天继续工作。",
   "author": { "name": "共享会话" },
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json",
@@ -10,6 +10,7 @@
   "interface": {
     "displayName": "共享会话",
     "shortDescription": "分享上下文、接收文件与更新提醒",
+    "longDescription": "在 Codex 聊天中编辑并发送交接。Mac 和 Windows 可在交互时收到聊天内提醒，点击链接打开本机对应聊天，后续更新复用同一聊天。接收端可指定项目并开启自动处理。",
     "developerName": "共享会话",
     "category": "Productivity",
     "brandColor": "#3F7456",
