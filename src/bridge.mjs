@@ -4,6 +4,7 @@ import { Client, clientFromProfile, serverUrl } from './client.mjs';
 import { privateJson, optionalJson } from './profile.mjs';
 import { CodexReader, exportThread, explicitFile, publishSnapshot } from './codex.mjs';
 import { requireThat, text, exactKeys } from './errors.mjs';
+import { createHash } from 'node:crypto';
 
 export class Bridge {
   constructor({ profile, server, settingsPath, downloadDirectory, readerOptions = {} }) {
@@ -96,6 +97,43 @@ export class Bridge {
     const sealed = await client.request(`/api/shares/${share.id}/seal`, 'POST', { version: result.version });
     return { ...result, status: sealed.status, reviewUrl: `${client.url}/review?share=${share.id}`,
       instruction: '草稿仅自己可见。请在网页核对完整文本、文件和接收成员，并点击确认发布；未发布前成员无法读取。' };
+  }
+  async send(args) {
+    exactKeys(args, ['requestId', 'shareId', 'title', 'content', 'recipients', 'filePaths']);
+    text(args.requestId, 180); text(args.title, 300); text(args.content, 64000);
+    requireThat(Array.isArray(args.recipients) && args.recipients.length > 0 && args.recipients.length <= 100);
+    const paths = args.filePaths || [];
+    requireThat(Array.isArray(paths) && paths.length <= 20);
+    const files = [];
+    for (const path of [...new Set(paths)]) files.push(await explicitFile(text(path, 4000)));
+    // Content is authored in chat; no native history is read. A changed retry is rejected, not silently appended.
+    const digest = createHash('sha256').update(JSON.stringify({ content: args.content, files })).digest('hex');
+    const sourceThreadId = `message:${digest}`;
+    const client = await this.client();
+    if (args.shareId !== undefined) {
+      text(args.shareId, 180);
+      const current = await client.request(`/api/shares/${encodeURIComponent(args.shareId)}/events?limit=1`);
+      requireThat(current.share.canManage && current.share.status === 'shared', 409, 'published_owned_share_required');
+      const { members } = await client.request(`/api/shares/${encodeURIComponent(args.shareId)}/members`);
+      const recipients = [...new Set(args.recipients.map(name => text(name, 80).toLowerCase()))].sort();
+      requireThat(JSON.stringify(recipients) === JSON.stringify(members.map(member => member.username).sort()), 409, 'handoff_recipients_changed');
+      requireThat(args.title === current.share.title, 409, 'handoff_title_changed');
+      let result = await client.request(`/api/shares/${args.shareId}/events`, 'POST', {
+        entries: [{ eventId: `composed:${args.requestId}`, kind: 'message', role: 'user', text: args.content }] });
+      for (const file of files) result = await client.request(`/api/shares/${args.shareId}/events`, 'POST', { entries: [file] });
+      return { shareId: args.shareId, status: 'shared', title: current.share.title, recipients, version: result.version,
+        files: files.length, viewUrl: `${client.url}/review?share=${args.shareId}` };
+    }
+    const share = await client.request('/api/drafts', 'POST', { requestId: args.requestId, title: args.title,
+      sourceThreadId, recipients: args.recipients });
+    if (share.status !== 'shared') {
+      const uploaded = await publishSnapshot(client, share.id, { sourceThreadId,
+        entries: [{ eventId: `message:${digest}`, kind: 'message', role: 'user', text: args.content }], omittedItems: 0, pendingTurns: 0 }, files);
+      const sealed = await client.request(`/api/shares/${share.id}/seal`, 'POST', { version: uploaded.version });
+      await client.request(`/api/shares/${share.id}/publish`, 'POST', { version: sealed.version, revision: sealed.revision });
+    }
+    return { shareId: share.id, status: 'shared', title: args.title, recipients: [...new Set(args.recipients)],
+      files: files.length, viewUrl: `${client.url}/review?share=${share.id}` };
   }
   async sync(args) {
     exactKeys(args, ['threadId', 'shareId', 'filePaths']); text(args.shareId, 180);

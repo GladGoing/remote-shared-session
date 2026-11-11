@@ -1,6 +1,6 @@
 # 共享会话
 
-0.2.3：自托管账号服务、网页登录与成员管理、Codex 插件、草稿预览发布、文本和文件接收、收件箱及 Windows 桌面提醒。支持局域网独立部署，也支持公网 HTTPS 部署。不依赖 Dot，不共享 OpenAI 账号。
+0.3.0：在 Codex 中编辑发送交接内容，Mac/Windows 聊天内提醒，打开接收端对应聊天继续工作，也可开启自动处理。保留原聊天历史导出、网页草稿预览、文件收发、成员管理及 Windows 桌面提醒。支持局域网独立部署和公网 HTTPS 部署。不共享 OpenAI 账号。
 
 ## 局域网独立部署
 
@@ -56,13 +56,29 @@ node src/cli.mjs serve
 ```json
 {
   "server": "https://YOUR_DOMAIN",
-  "notifications": true
+  "notifications": true,
+  "chatNotifications": true,
+  "receiveMode": "create"
 }
 ```
 
-可选 `profile` 和 `downloadDirectory` 必须是本机绝对路径；不要把口令或令牌写入插件清单。`SHARED_SESSION_SERVER`、`SHARED_SESSION_PROFILE`、`SHARED_SESSION_DOWNLOAD_DIR`、`SHARED_NOTIFICATIONS` 环境变量优先于该设置文件；提醒默认值可再由工具保存的个人开关覆盖。公网地址需要有效 HTTPS，局域网可明确指定私有 IP 的 HTTP 地址。
+可选 `profile`、`downloadDirectory` 和 `workspace` 必须是本机绝对路径；不要把口令或令牌写入插件清单。`SHARED_SESSION_SERVER`、`SHARED_SESSION_PROFILE`、`SHARED_SESSION_DOWNLOAD_DIR`、`SHARED_NOTIFICATIONS`、`SHARED_CHAT_NOTIFICATIONS` 环境变量优先于该设置文件；提醒默认值可再由工具保存的个人开关覆盖。公网地址需要有效 HTTPS，局域网可明确指定私有 IP 的 HTTP 地址。
 
-在 Codex 中按以下流程操作：
+### 在 Codex 中直接交接（推荐）
+
+两台电脑安装插件，使用各自的共享成员账号连接同一个服务。更新插件后，在 Codex 的“设置 > Hooks”或输入框的“Review hooks”中信任本插件的 Hooks，再新建或恢复聊天。
+
+发送端可以说：“把登录接口的修改要求整理成交接，发给 bob。”在聊天内继续修改内容，确认发送后 Codex 使用 `shared_session_send` 直接发布，不用再去网页确认，也不导出整段聊天。仅发送明确选择的内容和附件。后续补充同一交接时保留 `shareId`，使用新的 `requestId`；失败重试使用原编号和原内容。
+
+接收端在发送消息或恢复聊天时看到聊天内提醒和“打开共享聊天”链接。默认 `receiveMode=create` 会通过本机正在运行的 Codex App Server 创建接收聊天、导入内容，并启动一次模型阅读以呈现摘要；后续更新补入同一聊天。点击链接打开这个本机聊天即可继续工作，不会接管发送端原聊天。导入不会把收件箱记录标成已读，附件仍按需下载。
+
+接收端可说：“开启共享交接的自动处理，工作目录是 /Users/你的用户名/project。”这会设置 `receiveMode=work` 和本机 `workspace`，检查到新内容时自动新建或复用聊天并开始处理。路径由接收端选择；继续使用本机的权限和批准规则。已有聊天忙碌时保留更新，后续检查空闲后再处理，不打断正在进行的工作。
+
+只需要提醒时设置 `receiveMode=notify`，这不会创建聊天或调用模型。`shared_notifications` 的 `chatEnabled` 控制聊天内提醒，`enabled` 单独控制 Windows 桌面提醒。未启用自动处理时，首次阅读只要求呈现交接摘要，不执行交接任务。`create` 和 `work` 都使用接收端自己的模型与账号。
+
+本地 Hooks 不会在空闲时触发原生铃铛通知，检查时机为发送消息和恢复聊天。本机 App Server 或原生接口不可用时，提示会给出预填读取请求的新聊天链接，需要手动发送该请求；不会把这种回退当成已经启动工作。创建或启动的响应不确定时不自动重复创建、执行，应先检查已有目标聊天。参见 [Codex Hooks](https://learn.chatgpt.com/docs/hooks)、[聊天深链接](https://learn.chatgpt.com/docs/reference/commands#chats) 和 [App Server](https://learn.chatgpt.com/docs/app-server)。
+
+导出原聊天历史时按以下流程操作：
 
 1. 首次说“连接共享空间，服务器域名是你的域名”，后续可直接说“连接共享空间”。打开返回的链接，在网页输入共享账号密码，核对连接编号并允许连接；回 Codex 确认连接状态。密码无需发到聊天。
 2. 说“分享当前会话给 member，附上我选择的文件”。插件只读取准确 thread ID 下已完成轮次的用户/助手文本和明确选择的文件，准备仅自己可见的草稿。
@@ -70,17 +86,17 @@ node src/cli.mjs serve
 4. 接收成员说“查看共享收件箱”，读取指定会话、下载所选文件。内容呈现后标记对应记录已读；`nextCursor` 用于继续读取更新。
 5. 发送方说“同步这个共享会话”，向原接收成员发送新完成的文本和所选文件版本。插件不默认持续上传本机后续聊天。
 
-插件有 10 个工具：连接/状态、准备/同步、会话列表/读取/文件下载、收件箱/已读、提醒设置。需要持续共享时也可使用下文 CLI `sync` 进程。
+插件有 12 个工具：连接/状态、直接发送/打开本机聊天、准备/同步、会话列表/读取/文件下载、收件箱/已读、提醒设置。需要持续共享原聊天历史时也可使用下文 CLI `sync` 进程。
 
 ## 主动提醒的范围
 
 发布、后续同步和新增接收成员会生成持久化收件记录。插件通过本服务的 SSE 长连接接收记录，Windows 插件进程运行期间自动发送系统通知；可说“关闭共享提醒”或“查看共享提醒状态”。通知不显示会话正文、口令或文件内容，点击打开网页登录收件箱。系统可能因通知权限或免打扰而不显示横幅。
 
-断线后按账号和服务保存的游标补收，失败不会推进游标；重连可能重试同一条通知，已读记录仍保留在收件箱。插件退出、电脑关机或账号到期时不发送实时桌面通知，重新连接后补收。没有安装开机任务或后台系统服务。当前仅 Windows 桌面通知实现并验证；其他平台可使用网页收件箱和网页通知。
+断线后按账号和服务保存的游标补收，失败不会推进游标；重连可能重试同一条通知，已读记录仍保留在收件箱。插件退出、电脑关机或账号到期时不发送实时桌面通知，重新连接后补收。没有安装开机任务或后台系统服务。系统桌面通知仍仅支持 Windows；Mac 使用上文的 Codex 聊天内提醒。未支持的平台不会反复重试 Windows 通知。
 
 网页收件箱自动更新，也可点击“开启网页桌面提醒”授权浏览器通知，需保留页面。插件提醒和网页提醒独立开启，同时使用可能各收到一条。
 
-这不向空闲 Codex 聊天自动插入消息，也不启动模型轮次。ChatGPT Work 的原生 MCP Events 是另外的 HTTP/webhook 接入，需要公网 HTTPS 和持久订阅，本版尚未实现。参考 [OpenAI 插件打包](https://developers.openai.com/plugins/build/plugins) 与 [MCP Events 支持范围](https://developers.openai.com/plugins/build/mcp-events)。
+Windows 桌面提醒本身不启动模型轮次；聊天内提醒按接收模式启动阅读或工作。ChatGPT Work 的原生 MCP Events 是另外的 HTTP/webhook 接入，需要公网 HTTPS 和持久订阅，本版尚未实现。参考 [OpenAI 插件打包](https://developers.openai.com/plugins/build/plugins) 与 [MCP Events 支持范围](https://developers.openai.com/plugins/build/mcp-events)。
 
 ## 高级 CLI 与兼容接口
 
@@ -151,8 +167,10 @@ Windows 路径可用 `C:/projects/remote-shared-session/src/mcp.mjs` 这样的�
 | `shared_file_download` | 下载指定文件，验证 SHA-256，复用校验一致的文件，拒绝覆盖不同内容 |
 | `shared_connect` / `shared_connection_status` | 网页授权连接与连接状态 |
 | `shared_session_prepare` / `shared_session_sync` | 准备私有草稿与同步已发布会话 |
+| `shared_session_send` | 直接发送聊天内编辑确认的内容；带原 shareId 可补充同一交接 |
+| `shared_session_open` | 导入/复用接收端本机 Codex 聊天，返回打开链接；明确授权后可启动工作 |
 | `shared_inbox` / `shared_inbox_read` | 收件箱与标记已读 |
-| `shared_notifications` | 查看、开启或关闭桌面提醒 |
+| `shared_notifications` | 分别设置桌面与聊天内提醒、接收模式及本机工作目录 |
 
 `hasMore` 为 true 时继续翻页。下载只写入配置的接收目录，不执行文件内容。每次读取和下载都会重新校验账号和共享权限；撤权只阻止后续读取，不能收回已下载的副本。读取的资料进入当前会话上下文，不创建源会话的原生副本。
 

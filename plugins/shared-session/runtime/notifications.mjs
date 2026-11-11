@@ -43,11 +43,12 @@ export class NotificationWatcher {
   constructor(bridge, { notify = desktopNotice, defaultEnabled = false, retryMs = 3000 } = {}) {
     this.bridge = bridge; this.path = bridge.profile ? bridge.profile + '.notifications.json' : null;
     this.notify = notify; this.defaultEnabled = defaultEnabled; this.retryMs = retryMs;
+    this.supported = process.platform === 'win32' || notify !== desktopNotice;
     this.controller = null; this.running = null; this.error = null; this.preferences = null;
   }
   async status() {
     const saved = this.path ? await optionalJson(this.path) : null;
-    return { enabled: saved?.enabled ?? this.defaultEnabled, running: !!this.running, platform: process.platform,
+    return { enabled: saved?.enabled ?? this.defaultEnabled, running: !!this.running, supported: this.supported, platform: process.platform,
       lastError: this.error, delivery: 'desktop_notification_while_plugin_running', inbox: this.bridge.server ? `${this.bridge.server}/inbox` : undefined };
   }
   async configure(enabled) {
@@ -59,7 +60,7 @@ export class NotificationWatcher {
     return this.status();
   }
   async start() {
-    if (this.running || !this.path) return;
+    if (this.running || !this.path || !this.supported) return;
     this.preferences = await optionalJson(this.path) || { enabled: this.defaultEnabled };
     if (!this.preferences.enabled) return;
     this.controller = new AbortController(); const signal = this.controller.signal;

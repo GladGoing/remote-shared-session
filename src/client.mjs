@@ -18,10 +18,10 @@ export function serverUrl(value) {
 }
 export class Client {
   constructor(url, token) { this.url = serverUrl(url); this.token = token; }
-  async request(path, method = 'GET', body) {
+  async request(path, method = 'GET', body, { signal = AbortSignal.timeout(30000) } = {}) {
     requireThat(path.startsWith('/api/'), 400, 'invalid_api_path');
     const response = await fetch(this.url + path, {
-      method, redirect: 'error', signal: AbortSignal.timeout(30000),
+      method, redirect: 'error', signal,
       headers: { ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
       body: body === undefined ? undefined : JSON.stringify(body),
     });

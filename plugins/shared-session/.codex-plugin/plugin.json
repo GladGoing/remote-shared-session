@@ -1,9 +1,10 @@
 {
   "name": "shared-session",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "分享 Codex 会话，接收文件与更新提醒。",
   "author": { "name": "共享会话" },
   "skills": "./skills/",
+  "hooks": "./hooks/hooks.json",
   "mcpServers": "./.mcp.json",
   "onboardingSkill": "./skills/shared-session/SKILL.md",
   "interface": {

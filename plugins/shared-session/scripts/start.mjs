@@ -1,19 +1,9 @@
-import { homedir } from 'node:os';
-import { join, isAbsolute } from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { pluginSettings } from '../runtime/plugin-settings.mjs';
 
-const root = join(homedir(), '.remote-shared-session');
-const settingsPath = process.env.SHARED_SESSION_SETTINGS || join(root, 'settings.json');
-if (!isAbsolute(settingsPath)) throw new Error('absolute_settings_path_required');
-process.env.SHARED_SESSION_SETTINGS = settingsPath;
-let settings = {};
-try { settings = JSON.parse(await readFile(settingsPath, 'utf8')); }
-catch (error) { if (error.code !== 'ENOENT') throw error; }
-process.env.SHARED_SESSION_SERVER ||= settings.server || 'http://127.0.0.1:8787';
-process.env.SHARED_SESSION_PROFILE ||= settings.profile || join(root, 'profile.json');
-process.env.SHARED_SESSION_DOWNLOAD_DIR ||= settings.downloadDirectory || join(homedir(), 'Downloads', 'SharedSessions');
-process.env.SHARED_NOTIFICATIONS ||= settings.notifications === false ? '0' : '1';
-if (!isAbsolute(process.env.SHARED_SESSION_PROFILE) || !isAbsolute(process.env.SHARED_SESSION_DOWNLOAD_DIR)) throw new Error('absolute_paths_required');
+const settings = await pluginSettings();
+Object.assign(process.env, { SHARED_SESSION_SETTINGS: settings.settingsPath, SHARED_SESSION_SERVER: settings.server,
+  SHARED_SESSION_PROFILE: settings.profile, SHARED_SESSION_DOWNLOAD_DIR: settings.downloadDirectory,
+  SHARED_NOTIFICATIONS: settings.notifications ? '1' : '0', SHARED_CHAT_NOTIFICATIONS: settings.chatNotifications ? '1' : '0' });
 // Importing does not start stdio; spawn one runtime and forward the host's protocol unchanged.
 const { spawn } = await import('node:child_process');
 const { fileURLToPath } = await import('node:url');

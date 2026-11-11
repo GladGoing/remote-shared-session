@@ -199,7 +199,9 @@ test('真实 MCP 子进程：发现工具、读取增量、下载文件并拒绝
     child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: current, method, params }) + '\n');
   });
   assert.equal((await rpc('initialize', { protocolVersion: '2025-06-18' })).result.protocolVersion, '2025-06-18');
-  assert.equal((await rpc('tools/list')).result.tools.length, 10);
+  const tools = (await rpc('tools/list')).result.tools;
+  assert.equal(tools.length, 12);
+  assert.ok(['shared_session_send', 'shared_session_open'].every(name => tools.some(tool => tool.name === name)));
   const call = (name, args = {}) => rpc('tools/call', { name, arguments: args });
   const list = await call('shared_sessions');
   assert.equal(JSON.parse(list.result.content[0].text).shares[0].id, share.id);

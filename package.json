@@ -1,6 +1,6 @@
 {
   "name": "remote-shared-session",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "engines": { "node": ">=24.0.0 <25" },
