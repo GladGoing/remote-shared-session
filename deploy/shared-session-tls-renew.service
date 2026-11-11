@@ -1,0 +1,11 @@
+[Unit]
+Description=Renew shared-session HTTPS certificate and reload the existing gateway
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/shared-session/deploy.env
+ExecStart=/bin/sh ${SHARED_SERVICE_ROOT}/current/deploy/renew-certificate.sh
+TimeoutStartSec=10min

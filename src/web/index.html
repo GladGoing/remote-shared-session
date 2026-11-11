@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>共享会话</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/inbox.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <section id="login-screen" class="login-screen">
+    <div class="login-story">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">↗</span>共享会话</div>
+      <div class="story-body"><p class="eyebrow">让协作从上下文开始</p><h1>把一段会话，<br>交给下一位伙伴。</h1><p class="story-copy">共享讨论、文件和后续更新。<br>在各自的 Codex 中，接着理解同一件事。</p><div class="story-line" aria-hidden="true"><span>你的会话</span><i></i><b>共享空间</b><i></i><span>团队成员</span></div></div>
+      <p class="story-foot">由你选择共享内容，由你管理访问权限。</p>
+    </div>
+    <main class="login-form-area"><form id="login-form" class="login-form">
+      <p class="eyebrow">欢迎回来</p><h2>登录共享空间</h2><p class="muted">使用管理员为你创建的账号。</p>
+      <label for="login-username">账号</label><input id="login-username" name="username" autocomplete="username" required maxlength="80" placeholder="输入账号">
+      <label for="login-password">密码</label><input id="login-password" name="password" type="password" autocomplete="current-password" required maxlength="1024" placeholder="输入密码">
+      <p id="login-error" class="error" role="alert"></p><button id="login-submit" class="primary wide" type="submit">登录</button>
+      <p class="login-note muted">这是共享空间的账号，与你的 Codex 登录独立。</p>
+    </form></main>
+  </section>
+
+  <div id="app-screen" class="app-layout" hidden>
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">↗</span>共享会话</div>
+      <div class="workspace-label">团队工作空间</div>
+      <nav aria-label="主导航"><button id="nav-sessions" class="nav-item active"><span aria-hidden="true">▤</span>会话</button><button id="nav-inbox" class="nav-item"><span aria-hidden="true">◉</span>收件箱 <b id="unread-count" class="unread-count" hidden>0</b></button><button id="nav-members" class="nav-item" hidden><span aria-hidden="true">♧</span>成员管理</button><button id="nav-connect" class="nav-item"><span aria-hidden="true">⇄</span>连接 Codex</button></nav>
+      <div class="sidebar-bottom"><p class="small muted">仅共享你选择的内容</p><div class="account"><span id="avatar" class="avatar"></span><div><strong id="account-name"></strong><span id="account-role" class="small muted"></span></div><button id="logout" class="icon-button" aria-label="退出登录" title="退出登录">↪</button></div></div>
+    </aside>
+    <main class="workspace">
+      <section id="sessions-view" class="view">
+        <header class="page-heading"><div><p class="eyebrow">上下文，共同拥有</p><h1>会话</h1><p class="muted">查看共享内容，或核对准备发出的草稿。</p></div><button id="share-help" class="secondary">如何分享</button></header>
+        <div class="session-controls"><div id="filters" class="tabs" role="group" aria-label="筛选会话"><button data-filter="all" class="selected">全部</button><button data-filter="sent">我发出的</button><button data-filter="received">收到的</button><button data-filter="draft">草稿</button></div><label class="search-label"><span class="sr-only">搜索会话</span><input id="search" type="search" placeholder="搜索标题或分享者"></label></div>
+        <div class="session-workspace">
+          <aside class="session-list-panel" aria-label="会话列表"><div class="list-caption"><span id="list-count">0 个会话</span><button id="refresh" class="text-button">刷新</button></div><div id="session-list" class="session-list"></div><p id="empty-list" class="empty-list">还没有共享会话。<br>从 Codex 发起第一次分享。</p></aside>
+          <section class="reader" aria-label="会话内容"><div id="reader-empty" class="reader-empty"><span class="empty-symbol" aria-hidden="true">↗</span><h2>选择一段会话</h2><p class="muted">文本、文件与后续更新，都在这里。</p></div>
+            <div id="reader-content" hidden><header class="thread-heading"><div><div class="thread-topline"><span id="thread-status" class="badge"></span><span id="thread-owner" class="small muted"></span></div><h2 id="thread-title"></h2><p id="thread-summary" class="small muted"></p></div><button id="publish" class="primary" hidden>确认发布</button></header>
+              <div id="draft-notice" class="notice" hidden>这是仅自己可见的草稿。请核对会话、文件和接收成员，再确认发布。</div>
+              <details id="share-members" class="share-members" hidden open><summary>接收成员 <span id="member-count" class="small muted"></span></summary><div id="recipient-list" class="recipient-list"></div><form id="recipient-form" class="inline-form"><label class="sr-only" for="recipient-select">选择接收成员</label><select id="recipient-select"></select><button class="secondary" type="submit">添加成员</button></form></details>
+              <div id="thread-events" class="thread-events"></div><p class="reader-foot small muted">只读查看 · 已加载内容不会授予对方操作你电脑的权限</p>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="inbox-view" class="view" hidden><header class="page-heading"><div><p class="eyebrow">新的上下文，及时知道</p><h1>收件箱</h1><p class="muted">收到的会话与后续更新，会出现在这里。</p></div><button id="enable-notifications" class="secondary">开启网页桌面提醒</button></header><p id="inbox-status" class="small muted" role="status">正在连接提醒服务…</p><div id="inbox-list" class="inbox-list"></div><p id="inbox-empty" class="empty-list" hidden>暂时没有收到共享内容。</p><button id="inbox-more" class="secondary" hidden>加载更多记录</button><p class="small muted">网页提醒需要保留此页面。Codex 插件可在运行期间发送独立的桌面提醒。</p></section>
+
+      <section id="members-view" class="view" hidden><header class="page-heading"><div><p class="eyebrow">一起工作的人</p><h1>成员管理</h1><p class="muted">创建账号、设置角色与管理登录权限。</p></div><button id="add-member" class="primary">添加成员</button></header><div class="member-table-wrap"><table><thead><tr><th>成员</th><th>角色</th><th>状态</th><th>操作</th></tr></thead><tbody id="member-table"></tbody></table></div><p class="small muted">停用账号会退出该成员已登录的设备。已共享内容与原有访问清单保留。</p></section>
+
+      <section id="connection-view" class="view" hidden><header class="page-heading"><div><p class="eyebrow">回到熟悉的工作方式</p><h1>连接 Codex</h1><p class="muted">在 Codex 中发起连接，在这里完成账号授权。</p></div></header><div class="connection-card"><span class="connection-symbol" aria-hidden="true">⇄</span><h2 id="connect-title">将共享空间连接到 Codex</h2><p id="connect-description" class="muted">在已经配置共享连接的 Codex 中说：“连接共享空间”。打开它返回的登录地址，即可在此确认连接。</p><div id="device-authorization" hidden><p class="small muted">请核对 Codex 中显示的连接编号</p><code id="device-code" class="device-code"></code><p id="connect-account"></p><p class="small muted">允许 Codex 读取你有权访问的共享，并为你准备新的共享草稿。</p><div class="button-row"><button id="approve-device" class="primary">允许连接</button><button id="deny-device" class="secondary">取消连接</button></div></div><p id="device-result" role="status"></p><p class="small muted connection-foot">只确认由你本人刚刚发起的连接。</p></div></section>
+    </main>
+  </div>
+
+  <dialog id="member-dialog" aria-labelledby="member-dialog-title"><form id="member-form"><div class="dialog-heading"><h2 id="member-dialog-title">添加成员</h2><button type="button" data-close="member-dialog" class="icon-button" aria-label="关闭">×</button></div><p class="muted">创建后，将账号和初始密码单独交给成员。</p><label for="new-username">账号</label><input id="new-username" autocomplete="username" required maxlength="80" pattern="[a-zA-Z0-9][a-zA-Z0-9_.\-]*" placeholder="字母、数字、点、下划线或短横线"><label for="new-password">初始密码</label><input id="new-password" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required placeholder="至少 12 个字符"><label for="new-role">角色</label><select id="new-role"><option value="member">成员</option><option value="admin">管理员</option></select><p id="member-error" class="error" role="alert"></p><div class="dialog-actions"><button type="button" data-close="member-dialog" class="secondary">取消</button><button class="primary" type="submit">创建成员</button></div></form></dialog>
+  <dialog id="password-dialog" aria-labelledby="password-dialog-title"><form id="password-form"><input type="text" hidden id="reset-username" autocomplete="username"><div class="dialog-heading"><h2 id="password-dialog-title">重置密码</h2><button type="button" data-close="password-dialog" class="icon-button" aria-label="关闭">×</button></div><p id="reset-target" class="muted"></p><label for="reset-password">新密码</label><input id="reset-password" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required><label for="reset-confirm">再次输入新密码</label><input id="reset-confirm" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required><p id="password-error" class="error" role="alert"></p><div class="dialog-actions"><button type="button" data-close="password-dialog" class="secondary">取消</button><button class="primary" type="submit">保存新密码</button></div></form></dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-heading"><h2 id="help-title">从 Codex 开始分享</h2><button data-close="help-dialog" class="icon-button" aria-label="关闭">×</button></div><ol class="help-steps"><li><strong>连接共享空间</strong><p>在 Codex 中发起连接，使用网页完成登录授权。</p></li><li><strong>准备会话与文件</strong><p>告诉 Codex 要共享当前会话，并明确选择需要发送的文件。</p></li><li><strong>核对并发布</strong><p>打开草稿链接，核对完整内容和接收成员，再点击确认发布。</p></li><li><strong>成员读取更新</strong><p>成员在自己的 Codex 中读取会话、下载文件。你同步后，他们可继续读取新增内容。</p></li></ol></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

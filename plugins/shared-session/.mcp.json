@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "shared-session": {
+      "command": "node",
+      "args": ["${PLUGIN_ROOT}/scripts/start.mjs"],
+      "cwd": "${PLUGIN_ROOT}"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+    # BEGIN remote-shared-session
+    server {
+        listen 8080;
+        server_name shared.example.com;
+
+        location ^~ /.well-known/acme-challenge/ {
+            root /etc/nginx/tls/shared-session-acme;
+            default_type text/plain;
+            try_files $uri =404;
+        }
+
+        location / {
+            return 308 https://shared.example.com$request_uri;
+        }
+    }
+
+    server {
+        listen 8443 ssl;
+        server_name shared.example.com;
+        ssl_certificate /etc/nginx/tls/shared-session/fullchain.pem;
+        ssl_certificate_key /etc/nginx/tls/shared-session/privkey.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_session_cache shared:SharedSessionTLS:10m;
+        ssl_session_timeout 1d;
+        ssl_session_tickets off;
+        client_max_body_size 12m;
+        resolver 127.0.0.11 valid=10s ipv6=off;
+        set $session_backend shared-session-api;
+
+        location / {
+            proxy_pass http://$session_backend:8787;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_buffering off;
+            proxy_connect_timeout 5s;
+            proxy_read_timeout 75s;
+        }
+    }
+    # END remote-shared-session

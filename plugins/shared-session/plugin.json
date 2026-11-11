@@ -1,0 +1,22 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "shared-session",
+  "version": "0.2.3",
+  "description": "通过个人共享服务分享 Codex 会话、接收文本和文件，并获取桌面提醒。",
+  "author": { "name": "共享会话" },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/shared-session/SKILL.md",
+      "interface": {
+        "displayName": "共享会话",
+        "shortDescription": "分享上下文、接收文件与更新提醒",
+        "longDescription": "连接自托管共享空间。在网页使用账号密码授权，在 Codex 中准备分享、接收会话、下载文件。Windows 插件运行时接收系统提醒。",
+        "developerName": "共享会话",
+        "category": "Productivity",
+        "capabilities": ["Read", "Write"],
+        "brandColor": "#3F7456",
+        "defaultPrompt": ["连接共享空间并开启提醒", "查看共享收件箱", "分享当前会话"]
+      }
+    }
+  }
+}

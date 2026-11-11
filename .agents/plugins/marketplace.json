@@ -1,0 +1,10 @@
+{
+  "name": "shared-session-local",
+  "interface": { "displayName": "共享会话 · 本地开发" },
+  "plugins": [{
+    "name": "shared-session",
+    "source": { "source": "local", "path": "./plugins/shared-session" },
+    "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+    "category": "Productivity"
+  }]
+}

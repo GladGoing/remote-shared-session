@@ -1,0 +1,37 @@
+name: remote-shared-session
+
+services:
+  shared-session:
+    image: remote-shared-session:0.2.3
+    build:
+      context: ..
+    restart: unless-stopped
+    environment:
+      SHARED_PUBLIC_URL: ${SHARED_PUBLIC_URL:?Set the public HTTPS origin in a private environment file}
+    volumes:
+      - shared-data:/app/data
+    networks:
+      app:
+      ingress:
+        aliases:
+          - shared-session-api
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+networks:
+  app:
+    internal: true
+  ingress:
+    external: true
+    name: ${SHARED_GATEWAY_NETWORK:?Set the existing gateway network in a private environment file}
+
+volumes:
+  shared-data:
